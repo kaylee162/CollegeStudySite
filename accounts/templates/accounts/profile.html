@@ -1,19 +1,358 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container mt-5">
-  <h2>Your Profile</h2>
-  <hr>
-  {% if student_profile %}
-    <h4>Student Profile</h4>
-    <p><strong>Major:</strong> {{ student_profile.major }}</p>
-    <p><strong>Year:</strong> {{ student_profile.year }}</p>
-  {% elif tutor_profile %}
-    <h4>Tutor Profile</h4>
-    <p><strong>Subjects:</strong> {{ tutor_profile.subjects }}</p>
-    <p><strong>Rate:</strong> ${{ tutor_profile.rate }}</p>
-    <p><strong>Bio:</strong> {{ tutor_profile.bio }}</p>
-  {% else %}
-    <p>No profile data found.</p>
-  {% endif %}
+
+<div class="profile-page">
+    <div class="profile-container">
+        
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-avatar-section">
+                <div class="profile-avatar {% if student_profile %}student{% elif tutor_profile %}tutor{% endif %}">
+                    <i class="fas fa-{% if student_profile %}user-graduate{% elif tutor_profile %}chalkboard-teacher{% else %}user{% endif %}"></i>
+                </div>
+                <div class="profile-header-info">
+                    <h1>{{ user.get_full_name|default:user.username }}</h1>
+                    <p class="profile-role">
+                        <i class="fas fa-{% if student_profile %}graduation-cap{% elif tutor_profile %}briefcase{% else %}user{% endif %}"></i>
+                        {% if student_profile %}
+                            Student Account
+                        {% elif tutor_profile %}
+                            Tutor Account
+                        {% else %}
+                            User Account
+                        {% endif %}
+                    </p>
+                    <p class="profile-email">
+                        <i class="fas fa-envelope"></i>
+                        {{ user.email }}
+                    </p>
+                </div>
+            </div>
+            <div class="profile-actions">
+                <a href="#" class="btn btn-secondary">
+                    <i class="fas fa-edit"></i>
+                    <span>Edit Profile</span>
+                </a>
+                <a href="{% url 'accounts:logout' %}" class="btn btn-outline">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+
+        {% if student_profile %}
+            <!-- Student Profile -->
+            <div class="profile-content">
+                <div class="profile-stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon student">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ student_profile.major|default:"Not Set" }}</div>
+                            <div class="stat-label">Major</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon student">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ student_profile.year|default:"Not Set" }}</div>
+                            <div class="stat-label">Academic Year</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon student">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value">0</div>
+                            <div class="stat-label">Sessions Completed</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon student">
+                            <i class="fas fa-user-friends"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value">0</div>
+                            <div class="stat-label">Active Tutors</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-sections">
+                    <div class="profile-section">
+                        <div class="section-header">
+                            <h2>
+                                <i class="fas fa-info-circle"></i>
+                                About
+                            </h2>
+                        </div>
+                        <div class="section-content">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Username</span>
+                                    <span class="info-value">{{ user.username }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Email</span>
+                                    <span class="info-value">{{ user.email }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Major</span>
+                                    <span class="info-value">{{ student_profile.major|default:"Not specified" }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Year</span>
+                                    <span class="info-value">{{ student_profile.year|default:"Not specified" }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Member Since</span>
+                                    <span class="info-value">{{ user.date_joined|date:"F Y" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-section">
+                        <div class="section-header">
+                            <h2>
+                                <i class="fas fa-chart-line"></i>
+                                Quick Actions
+                            </h2>
+                        </div>
+                        <div class="section-content">
+                            <div class="action-cards">
+                                <a href="{% url 'tutoringsession:index' %}" class="action-card">
+                                    <div class="action-icon">
+                                        <i class="fas fa-search"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <h3>Find a Tutor</h3>
+                                        <p>Browse available tutors for your subjects</p>
+                                    </div>
+                                    <i class="fas fa-arrow-right action-arrow"></i>
+                                </a>
+
+                                <a href="{% url 'tutoringsession:my_requests' %}" class="action-card">
+                                    <div class="action-icon">
+                                        <i class="fas fa-clipboard-list"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <h3>My Requests</h3>
+                                        <p>View your tutoring requests and sessions</p>
+                                    </div>
+                                    <i class="fas fa-arrow-right action-arrow"></i>
+                                </a>
+
+                                <a href="{% url 'accounts:connect' %}" class="action-card">
+                                    <div class="action-icon">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <h3>Connect</h3>
+                                        <p>Message your tutors and stay connected</p>
+                                    </div>
+                                    <i class="fas fa-arrow-right action-arrow"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        {% elif tutor_profile %}
+            <!-- Tutor Profile -->
+            <div class="profile-content">
+                <div class="profile-stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon tutor">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value">${{ tutor_profile.rate }}</div>
+                            <div class="stat-label">Hourly Rate</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon tutor">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ tutor_profile.location|default:"Not Set" }}</div>
+                            <div class="stat-label">Location</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon tutor">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value">0</div>
+                            <div class="stat-label">Sessions Completed</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon tutor">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value">5.0</div>
+                            <div class="stat-label">Rating</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-sections">
+                    <div class="profile-section">
+                        <div class="section-header">
+                            <h2>
+                                <i class="fas fa-user"></i>
+                                About Me
+                            </h2>
+                        </div>
+                        <div class="section-content">
+                            <div class="bio-section">
+                                {% if tutor_profile.bio %}
+                                    <p class="bio-text">{{ tutor_profile.bio }}</p>
+                                {% else %}
+                                    <p class="bio-text empty">No bio added yet. Add a bio to help students get to know you better!</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-section">
+                        <div class="section-header">
+                            <h2>
+                                <i class="fas fa-book-open"></i>
+                                Subjects I Teach
+                            </h2>
+                        </div>
+                        <div class="section-content">
+                            {% if tutor_profile.subjects %}
+                                <div class="subjects-tags">
+                                    {% for subject in tutor_profile.subjects.all %}
+                                        <span class="subject-tag">
+                                            <i class="fas fa-check-circle"></i>
+                                            {{ subject.name }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="empty-state">No subjects added yet.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="profile-section">
+                        <div class="section-header">
+                            <h2>
+                                <i class="fas fa-info-circle"></i>
+                                Profile Information
+                            </h2>
+                        </div>
+                        <div class="section-content">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Username</span>
+                                    <span class="info-value">{{ user.username }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Email</span>
+                                    <span class="info-value">{{ user.email }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Hourly Rate</span>
+                                    <span class="info-value">${{ tutor_profile.rate }}/hour</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Location</span>
+                                    <span class="info-value">{{ tutor_profile.location|default:"Not specified" }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Member Since</span>
+                                    <span class="info-value">{{ user.date_joined|date:"F Y" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-section">
+                        <div class="section-header">
+                            <h2>
+                                <i class="fas fa-rocket"></i>
+                                Quick Actions
+                            </h2>
+                        </div>
+                        <div class="section-content">
+                            <div class="action-cards">
+                                <a href="{% url 'tutoringsession:find_students' %}" class="action-card">
+                                    <div class="action-icon">
+                                        <i class="fas fa-search"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <h3>Find Students</h3>
+                                        <p>Connect with students who need your help</p>
+                                    </div>
+                                    <i class="fas fa-arrow-right action-arrow"></i>
+                                </a>
+
+                                <a href="{% url 'tutoringsession:my_sessions' %}" class="action-card">
+                                    <div class="action-icon">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <h3>My Sessions</h3>
+                                        <p>Manage your upcoming tutoring sessions</p>
+                                    </div>
+                                    <i class="fas fa-arrow-right action-arrow"></i>
+                                </a>
+
+                                <a href="{% url 'accounts:connect' %}" class="action-card">
+                                    <div class="action-icon">
+                                        <i class="fas fa-comments"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <h3>Messages</h3>
+                                        <p>Chat with your students and respond to inquiries</p>
+                                    </div>
+                                    <i class="fas fa-arrow-right action-arrow"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        {% else %}
+            <!-- No Profile -->
+            <div class="profile-content">
+                <div class="empty-profile">
+                    <div class="empty-icon">
+                        <i class="fas fa-user-slash"></i>
+                    </div>
+                    <h2>No Profile Found</h2>
+                    <p>It looks like you haven't set up your profile yet.</p>
+                    <div class="empty-actions">
+                        <a href="{% url 'accounts:signup_choice' %}" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i>
+                            <span>Complete Your Profile</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+    </div>
 </div>
+
 {% endblock %}

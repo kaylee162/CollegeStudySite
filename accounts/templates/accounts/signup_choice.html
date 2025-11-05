@@ -1,11 +1,56 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="text-center mt-5">
-  <h2>Join College Study Site</h2>
-  <p class="mb-4">Choose your role to get started:</p>
-  <div class="d-flex justify-content-center gap-4">
-    <a href="{% url 'accounts:signup_student' %}" class="btn btn-primary btn-lg">I’m a Student</a>
-    <a href="{% url 'accounts:signup_tutor' %}" class="btn btn-outline-primary btn-lg">I’m a Tutor</a>
-  </div>
+
+<div class="auth-page">
+    <div class="auth-container">
+        <div class="auth-header">
+            <div class="auth-icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <h1>Join College Study Site</h1>
+            <p>Choose your role to get started on your learning journey</p>
+        </div>
+
+        <div class="role-selection-grid">
+            <a href="{% url 'accounts:signup_student' %}" class="role-card">
+                <div class="role-icon student">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <h3>I'm a Student</h3>
+                <p>Find expert tutors to help you excel in your courses</p>
+                <ul class="role-features">
+                    <li><i class="fas fa-check"></i> Browse verified tutors</li>
+                    <li><i class="fas fa-check"></i> Schedule flexible sessions</li>
+                    <li><i class="fas fa-check"></i> Track your progress</li>
+                </ul>
+                <div class="role-cta">
+                    <span>Sign up as Student</span>
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </a>
+
+            <a href="{% url 'accounts:signup_tutor' %}" class="role-card">
+                <div class="role-icon tutor">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </div>
+                <h3>I'm a Tutor</h3>
+                <p>Share your expertise and earn money helping students succeed</p>
+                <ul class="role-features">
+                    <li><i class="fas fa-check"></i> Connect with students</li>
+                    <li><i class="fas fa-check"></i> Set your own rates</li>
+                    <li><i class="fas fa-check"></i> Flexible scheduling</li>
+                </ul>
+                <div class="role-cta">
+                    <span>Sign up as Tutor</span>
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </a>
+        </div>
+
+        <div class="auth-footer">
+            <p>Already have an account? <a href="{% url 'accounts:login' %}">Log in</a></p>
+        </div>
+    </div>
 </div>
+
 {% endblock %}
