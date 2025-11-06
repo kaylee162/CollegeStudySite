@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="section-container" style="margin-top:2rem;">
+  <div class="profile-section">
+    <div class="section-header">
+      <h2><i class="fas fa-user-friends"></i> Connect with Students</h2>
+    </div>
+
+    <div class="section-content">
+      <!-- Tabs -->
+      <div class="tabs" style="display:flex; gap:.5rem; margin-bottom:1rem;">
+        <a href="?tab=find" class="btn {% if tab == 'find' %}btn-primary{% else %}btn-outline-nav{% endif %}">
+          <i class="fas fa-user-plus"></i> Find New
+          <span class="section-badge" style="margin-left:.5rem;">{{ counts.find }}</span>
+        </a>
+        <a href="?tab=friends" class="btn {% if tab == 'friends' %}btn-primary{% else %}btn-outline-nav{% endif %}">
+          <i class="fas fa-user-check"></i> Your Friends
+          <span class="section-badge" style="margin-left:.5rem;">{{ counts.friends }}</span>
+        </a>
+      </div>
+
+      <!-- ===== FIND NEW TAB ===== -->
+      {% if tab == 'find' %}
+      <form method="get" class="auth-form" style="margin-bottom:1.5rem;">
+        <input type="hidden" name="tab" value="find">
+        <div class="form-group">
+          <label class="form-label" for="q">Search by name, username, or email</label>
+          <input id="q" name="q" type="text" placeholder="e.g., Alice, Bob Chen, bob@example.edu" value="{{ query }}"
+                 class="auth-form-input" style="width:100%; padding:.75rem;">
+        </div>
+        <div class="section-cta">
+          <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-search"></i> Search
+          </button>
+        </div>
+      </form>
+
+      <h3 style="margin:1rem 0;">Suggestions ({{ users|length }})</h3>
+      {% if users %}
+        <div class="action-cards">
+          {% for u in users %}
+          <div class="action-card">
+            <div class="action-icon"><i class="fas fa-user"></i></div>
+            <div class="action-content">
+              <h3>{{ u.username }}</h3>
+              <p style="color:var(--text-secondary); margin-top:.25rem;">
+                {% if u.first_name or u.last_name %}
+                  {{ u.first_name }} {{ u.last_name }}
+                {% else %}
+                  Student
+                {% endif %}
+                {% if u.email %} • {{ u.email }}{% endif %}
+              </p>
+            </div>
+            <a href="{% url 'accounts:connect_user' u.id %}" class="btn btn-primary">
+              <i class="fas fa-user-plus"></i> Connect
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-profile">
+          <div class="empty-icon"><i class="far fa-smile"></i></div>
+          <h2>No suggestions found</h2>
+          <p>Try a different search or invite more friends!</p>
+        </div>
+      {% endif %}
+      {% endif %}
+
+      <!-- ===== FRIENDS TAB ===== -->
+      {% if tab == 'friends' %}
+      <h3 style="margin:1rem 0;">Your Friends ({{ friends|length }})</h3>
+      {% if friends %}
+        <div class="action-cards">
+          {% for f in friends %}
+          <div class="action-card">
+            <div class="action-icon"><i class="fas fa-user-check"></i></div>
+            <div class="action-content">
+              <h3>{{ f.username }}</h3>
+              <p style="color:var(--text-secondary); margin-top:.25rem;">
+                {% if f.first_name or f.last_name %}
+                  {{ f.first_name }} {{ f.last_name }}
+                {% else %}
+                  Student
+                {% endif %}
+                {% if f.email %} • {{ f.email }}{% endif %}
+              </p>
+            </div>
+            <span class="section-badge" style="margin-left:auto;">Connected</span>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">You haven’t connected with anyone yet.</div>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

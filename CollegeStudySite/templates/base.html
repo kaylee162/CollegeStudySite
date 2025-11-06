@@ -37,6 +37,14 @@
                                     <span>Profile</span>
                                 </a>
                             </li>
+                             <li>
+                                <a href="{% url 'accounts:connect' %}"
+                                class="{% if request.resolver_match.view_name == 'accounts:connect' %}active{% endif %}">
+                                    <i class="fas fa-user-friends"></i>
+                                    <span>Connect</span>
+                                </a>
+                            </li>
+
 
                             {% if user|has_tutorprofile %}
                                 <li>

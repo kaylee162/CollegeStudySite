@@ -31,3 +31,24 @@ class TutorProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - Tutor"
+
+
+class Friendship(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="friendships_from")
+    friend = models.ForeignKey(User, on_delete=models.CASCADE, related_name="friendships_to")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "friend"], name="unique_friend_pair"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.user_id == self.friend_id:
+            raise ValueError("Cannot friend yourself.")
+        if self.user_id and self.friend_id and self.user_id > self.friend_id:
+            self.user, self.friend = self.friend, self.user
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user} ↔ {self.friend}"
