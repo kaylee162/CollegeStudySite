@@ -9,6 +9,8 @@ from accounts.models import Friendship
 from .models import TutoringSession, SessionRequest
 from django.contrib.auth.models import User
 from accounts.models import TutorProfile, StudentProfile
+import json
+from tutoringsession.utils import haversine
 
 
 REMOTE_TOKENS = {"remote", "online"}
