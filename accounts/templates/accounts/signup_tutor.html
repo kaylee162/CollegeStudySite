@@ -114,7 +114,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="form-section">
               <h3 class="form-section-title">
                 <i class="fas fa-briefcase"></i>
@@ -217,22 +216,21 @@
                         </div>
                     {% endfor %}
                 {% endif %}
-            </div>            
+            </div>
+            <button type="submit" class="btn btn-primary btn-form">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Create Tutor Account</span>
+                </button>
+
+                <div class="auth-footer">
+                    <p>Already have an account? <a href="{% url 'accounts:login' %}">Log in</a></p>
+                </div>
+
+                <div class="auth-alternative">
+                    <p>Looking to find a tutor? <a href="{% url 'accounts:signup_student' %}">Sign up as student</a></p>
+                </div>    
           </div>
-
-          <button type="submit" class="btn btn-primary btn-form">
-              <i class="fas fa-user-plus"></i>
-              <span>Create Tutor Account</span>
-          </button>
         </form>
-
-        <div class="auth-footer">
-            <p>Already have an account? <a href="{% url 'accounts:login' %}">Log in</a></p>
-        </div>
-
-        <div class="auth-alternative">
-            <p>Looking to find a tutor? <a href="{% url 'accounts:signup_student' %}">Sign up as student</a></p>
-        </div>
     </div>
 </div>
 
