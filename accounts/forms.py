@@ -2,11 +2,15 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from .models import StudentProfile, TutorProfile
+from classes.models import Class
 
 
 class StudentSignUpForm(UserCreationForm):
     major = forms.CharField(max_length=100, required=False)
     year = forms.CharField(max_length=20, required=False)
+    
+    # ✅ Add classes field (hidden, will be populated by JS)
+    classes = forms.CharField(required=False, widget=forms.HiddenInput())
 
     location = forms.CharField(
             max_length=255,
@@ -26,7 +30,7 @@ class StudentSignUpForm(UserCreationForm):
     def save(self, commit=True):
         user = super().save(commit=commit)
         if commit:
-            StudentProfile.objects.create(
+            profile = StudentProfile.objects.create(
                 user=user,
                 major=self.cleaned_data.get('major', ''),
                 year=self.cleaned_data.get('year', ''),
@@ -34,16 +38,18 @@ class StudentSignUpForm(UserCreationForm):
                 latitude=self.cleaned_data.get('latitude') or None,
                 longitude=self.cleaned_data.get('longitude') or None,
             )
+            
+            # ✅ Handle classes from hidden input
+            class_ids = self.cleaned_data.get('classes', '').split(',')
+            valid_classes = Class.objects.filter(id__in=[c for c in class_ids if c.isdigit()])
+            profile.classes.set(valid_classes)
+            
         return user
 
 
 class TutorSignUpForm(UserCreationForm):
-    subjects = forms.MultipleChoiceField(
-        choices=TutorProfile.SUBJECT_CHOICES,
-        widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': 6}),
-        required=False,
-        help_text="Hold CTRL (Windows) or CMD (Mac) to select multiple subjects."
-    )
+    classes = forms.CharField(required=False, widget=forms.HiddenInput())
+    
     rate = forms.DecimalField(
         max_digits=6,
         decimal_places=2,
@@ -78,32 +84,30 @@ class TutorSignUpForm(UserCreationForm):
     def save(self, commit=True):
         user = super().save(commit=commit)
         if commit:
-            subjects_list = self.cleaned_data.get('subjects', [])
-            subjects_str = ', '.join(subjects_list)
-            TutorProfile.objects.create(
+            profile = TutorProfile.objects.create(
                 user=user,
-                subjects=subjects_str,
                 rate=self.cleaned_data.get('rate'),
                 bio=self.cleaned_data.get('bio', ''),
                 location=self.cleaned_data.get('location', ''),
                 latitude=self.cleaned_data.get('latitude') or None,
                 longitude=self.cleaned_data.get('longitude') or None,
             )
+            
+            # ✅ Handle classes from hidden input
+            class_ids = self.cleaned_data.get('classes', '').split(',')
+            valid_classes = Class.objects.filter(id__in=[c for c in class_ids if c.isdigit()])
+            profile.classes.set(valid_classes)
+            
         return user
 
 
 class TutorProfileForm(forms.ModelForm):
-    subjects = forms.MultipleChoiceField(
-        choices=TutorProfile.SUBJECT_CHOICES,
-        widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': 6}),
-        required=False,
-        help_text="Hold CTRL (Windows) or CMD (Mac) to select multiple subjects."
-    )
+    classes = forms.CharField(required=False, widget=forms.HiddenInput())
 
     class Meta:
         model = TutorProfile
         fields = [
-            'subjects', 'rate', 'bio', 'school',
+            'rate', 'bio', 'school',
             'location', 'latitude', 'longitude',
             'avatar',
         ]
@@ -121,21 +125,23 @@ class TutorProfileForm(forms.ModelForm):
             'longitude': forms.HiddenInput(),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.instance and self.instance.subjects:
-            self.initial['subjects'] = [s.strip() for s in self.instance.subjects.split(',')]
-
     def save(self, commit=True):
-        tutor_profile = super().save(commit=False)
-        subjects_list = self.cleaned_data.get('subjects', [])
-        tutor_profile.subjects = ', '.join(subjects_list)
+        profile = super().save(commit=False)
         if commit:
-            tutor_profile.save()
-        return tutor_profile
+            profile.save()
+            
+            # ✅ Handle classes from hidden input
+            class_ids = self.cleaned_data.get('classes', '').split(',')
+            valid_classes = Class.objects.filter(id__in=[c for c in class_ids if c.isdigit()])
+            profile.classes.set(valid_classes)
+            
+        return profile
 
 
 class StudentProfileForm(forms.ModelForm):
+    # ✅ Add classes field
+    classes = forms.CharField(required=False, widget=forms.HiddenInput())
+    
     class Meta:
         model = StudentProfile
         fields = [
@@ -151,3 +157,15 @@ class StudentProfileForm(forms.ModelForm):
             'latitude': forms.HiddenInput(),
             'longitude': forms.HiddenInput(),
         }
+    
+    def save(self, commit=True):
+        profile = super().save(commit=False)
+        if commit:
+            profile.save()
+            
+            # ✅ Handle classes from hidden input
+            class_ids = self.cleaned_data.get('classes', '').split(',')
+            valid_classes = Class.objects.filter(id__in=[c for c in class_ids if c.isdigit()])
+            profile.classes.set(valid_classes)
+            
+        return profile
