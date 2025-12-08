@@ -7,11 +7,19 @@
         
         <!-- Back Button -->
         <div class="detail-back">
-            <a href="{% url 'tutoringsession:dashboard' %}" class="back-link">
-                <i class="fas fa-arrow-left"></i>
-                <span>Back to Dashboard</span>
-            </a>
+            {% if user == session.tutor %}
+                <a href="{% url 'tutoringsession:dashboard' %}" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Dashboard</span>
+                </a>
+            {% else %}
+                <a href="{% url 'tutoringsession:my_requests' %}" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to My Requests</span>
+                </a>
+            {% endif %}
         </div>
+
 
         <!-- Session Header -->
         <div class="detail-header">
@@ -49,6 +57,7 @@
                 </div>
             </div>
 
+            {% if user == session.tutor %}
             <div class="detail-actions">
                 <a href="{% url 'tutoringsession:edit' session.id %}" class="btn btn-primary">
                     <i class="fas fa-edit"></i>
@@ -59,6 +68,8 @@
                     <span>Delete</span>
                 </a>
             </div>
+            {% endif %}
+
         </div>
 
         <!-- Session Details Grid -->
@@ -130,6 +141,50 @@
                     </div>
                 </div>
             </div>
+
+            {% if user == session.tutor %}
+            <div class="detail-card" style="margin-top: 2rem;">
+                <div class="detail-card-header">
+                    <h2>
+                        <i class="fas fa-user-clock"></i>
+                        Pending Requests
+                    </h2>
+                </div>
+
+                <div class="detail-card-body">
+                    {% if session.requests.all %}
+                        {% for r in session.requests.all %}
+                            <div class="action-card" style="align-items:center; display:flex; justify-content:space-between;">
+                                <div>
+                                    <strong>{{ r.student.username }}</strong>
+                                    <span style="color:var(--text-secondary);">
+                                        ({{ r.get_status_display }})
+                                    </span><br>
+                                    <small>Requested: {{ r.created_at }}</small>
+                                </div>
+
+                                {% if r.status == "pending" %}
+                                <div style="display:flex; gap:0.5rem;">
+                                    <a href="{% url 'tutoringsession:approve_request' r.id %}" 
+                                    class="btn btn-primary btn-sm">
+                                    Approve
+                                    </a>
+
+                                    <a href="{% url 'tutoringsession:decline_request' r.id %}" 
+                                    class="btn btn-secondary btn-sm">
+                                    Decline
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% empty %}
+                            <p>No requests yet.</p>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
 
             <!-- Sidebar Info -->
             <div class="detail-sidebar">
