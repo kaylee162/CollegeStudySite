@@ -91,13 +91,10 @@ def logout_view(request):
 # Profile Page
 # ------------------------------------
 def profile_view(request, username=None):
-    # If username is provided, show that user's profile
-    # Otherwise, show the logged-in user's profile
     if username:
         profile_user = get_object_or_404(User, username=username)
         is_own_profile = request.user.is_authenticated and request.user == profile_user
     else:
-        # No username provided - must be logged in to view own profile
         if not request.user.is_authenticated:
             return redirect('accounts:login')
         profile_user = request.user
@@ -106,16 +103,16 @@ def profile_view(request, username=None):
     student_profile = getattr(profile_user, 'studentprofile', None)
     tutor_profile = getattr(profile_user, 'tutorprofile', None)
     
-    # ✅ FIXED: Get classes with skill levels for students
-    student_classes_with_skills = []
+    # ✅ Get classes with skill levels for students
+    student_classes_with_skill = []
     if student_profile:
         from .models import StudentClassSkill
-        for skill in student_profile.class_skills.select_related('class_taken'):
-            student_classes_with_skills.append({
-                'name': skill.class_taken.name,
+        for skill in StudentClassSkill.objects.filter(student=student_profile).select_related('class_taken'):
+            student_classes_with_skill.append({
+                'class': skill.class_taken,
                 'skill_level': skill.skill_level,
-                'color': skill.get_color(),
-                'skill_label': skill.get_skill_level_display()
+                'skill_label': skill.get_skill_level_display(),
+                'color': skill.get_color()
             })
     
     return render(request, 'accounts/profile.html', {
@@ -123,7 +120,7 @@ def profile_view(request, username=None):
         'student_profile': student_profile,
         'tutor_profile': tutor_profile,
         'is_own_profile': is_own_profile,
-        'student_classes_with_skills': student_classes_with_skills,
+        'student_classes_with_skill': student_classes_with_skill,
     })
 
 def _get_user_profile(u):
