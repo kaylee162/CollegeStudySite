@@ -177,6 +177,71 @@ def request_session(request, session_id):
 
     return redirect("tutoringsession:index")
 
+@login_required
+def approve_request(request, request_id):
+    req = get_object_or_404(SessionRequest, id=request_id)
+
+    # Permission check
+    if req.session.tutor != request.user:
+        messages.error(request, "You cannot approve requests for this session.")
+        return redirect("tutoringsession:dashboard")
+
+    # Prevent approving if full
+    if req.session.is_full():
+        messages.error(request, "This session is full.")
+        return redirect("tutoringsession:detail", req.session.id)
+
+    req.status = "approved"
+    req.save()
+
+    messages.success(request, f"{req.student.username} has been approved!")
+    return redirect("tutoringsession:detail", req.session.id)
+
+
+@login_required
+def decline_request(request, request_id):
+    req = get_object_or_404(SessionRequest, id=request_id)
+
+    if req.session.tutor != request.user:
+        messages.error(request, "You cannot decline requests for this session.")
+        return redirect("tutoringsession:dashboard")
+
+    req.status = "declined"
+    req.save()
+
+    messages.info(request, f"Request from {req.student.username} declined.")
+    return redirect("tutoringsession:detail", req.session.id)
+
+@login_required
+def my_requests(request):
+    requests_qs = SessionRequest.objects.filter(student=request.user).select_related("session")
+
+    pending = requests_qs.filter(status="pending").order_by("session__date", "session__start_time")
+    approved = requests_qs.filter(status="approved").order_by("session__date", "session__start_time")
+    declined = requests_qs.filter(status="declined").order_by("session__date", "session__start_time")
+
+    return render(request, "tutoringsession/my_requests.html", {
+        "pending": pending,
+        "approved": approved,
+        "declined": declined,
+    })
+
+@login_required
+def cancel_request(request, request_id):
+    req = get_object_or_404(SessionRequest, id=request_id, student=request.user)
+
+    # Students cannot cancel declined requests (not necessary)
+    # But safe to prevent weird behavior
+    if req.status == "declined":
+        messages.error(request, "This request cannot be canceled.")
+        return redirect("tutoringsession:my_requests")
+
+    # Cancel by deleting or marking as canceled
+    req.status = "canceled"
+    req.save()
+
+    messages.success(request, "Your request has been canceled.")
+    return redirect("tutoringsession:my_requests")
 
 def search_students(request):
     qs = StudentProfile.objects.select_related("user").all()
