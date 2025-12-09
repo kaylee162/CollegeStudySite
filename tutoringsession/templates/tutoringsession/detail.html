@@ -7,19 +7,11 @@
         
         <!-- Back Button -->
         <div class="detail-back">
-            {% if user == session.tutor %}
-                <a href="{% url 'tutoringsession:dashboard' %}" class="back-link">
-                    <i class="fas fa-arrow-left"></i>
-                    <span>Back to Dashboard</span>
-                </a>
-            {% else %}
-                <a href="{% url 'tutoringsession:my_requests' %}" class="back-link">
-                    <i class="fas fa-arrow-left"></i>
-                    <span>Back to My Requests</span>
-                </a>
-            {% endif %}
+            <a href="{% url 'tutoringsession:dashboard' %}" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Dashboard</span>
+            </a>
         </div>
-
 
         <!-- Session Header -->
         <div class="detail-header">
@@ -57,7 +49,6 @@
                 </div>
             </div>
 
-            {% if user == session.tutor %}
             <div class="detail-actions">
                 <a href="{% url 'tutoringsession:edit' session.id %}" class="btn btn-primary">
                     <i class="fas fa-edit"></i>
@@ -68,8 +59,6 @@
                     <span>Delete</span>
                 </a>
             </div>
-            {% endif %}
-
         </div>
 
         <!-- Session Details Grid -->
@@ -142,50 +131,6 @@
                 </div>
             </div>
 
-            {% if user == session.tutor %}
-            <div class="detail-card" style="margin-top: 2rem;">
-                <div class="detail-card-header">
-                    <h2>
-                        <i class="fas fa-user-clock"></i>
-                        Pending Requests
-                    </h2>
-                </div>
-
-                <div class="detail-card-body">
-                    {% if session.requests.all %}
-                        {% for r in session.requests.all %}
-                            <div class="action-card" style="align-items:center; display:flex; justify-content:space-between;">
-                                <div>
-                                    <strong>{{ r.student.username }}</strong>
-                                    <span style="color:var(--text-secondary);">
-                                        ({{ r.get_status_display }})
-                                    </span><br>
-                                    <small>Requested: {{ r.created_at }}</small>
-                                </div>
-
-                                {% if r.status == "pending" %}
-                                <div style="display:flex; gap:0.5rem;">
-                                    <a href="{% url 'tutoringsession:approve_request' r.id %}" 
-                                    class="btn btn-primary btn-sm">
-                                    Approve
-                                    </a>
-
-                                    <a href="{% url 'tutoringsession:decline_request' r.id %}" 
-                                    class="btn btn-secondary btn-sm">
-                                    Decline
-                                    </a>
-                                </div>
-                                {% endif %}
-                            </div>
-                        {% empty %}
-                            <p>No requests yet.</p>
-                        {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-
-
             <!-- Sidebar Info -->
             <div class="detail-sidebar">
                 
@@ -241,6 +186,51 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Recommended Students -->
+                <div class="detail-card">
+                    <div class="detail-card-header">
+                        <h2>
+                            <i class="fas fa-user-graduate"></i>
+                                Recommended Students
+                        </h2>
+                    </div>
+
+                    <div class="detail-card-body">
+                        {% if recommended_students %}
+                            <div class="action-cards">
+                                {% for rec in recommended_students %}
+                                <div class="action-card">
+
+                                    <div class="action-icon student">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+
+                                    <div class="action-content">
+                                        <h3>{{ rec.student.user.username }}</h3>
+                                    </div>
+
+                                    <a href="{% url 'accounts:profile' rec.student.user.username %}"
+                                        class="btn btn-outline-nav">
+                                        View
+                                    </a>
+
+                                    <a href="{% url 'accounts:connect_request' rec.student.user.id %}"
+                                        class="btn btn-primary">
+                                        Connect
+                                    </a>
+
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="empty-state" style="text-align:center; margin:1rem 0;">
+                No recommended students for this subject yet.
+            </p>
+        {% endif %}
+    </div>
+</div>
+
 
             </div>
 

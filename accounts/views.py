@@ -91,36 +91,31 @@ def logout_view(request):
 # Profile Page
 # ------------------------------------
 def profile_view(request, username=None):
+
+    # Determine whose profile is being viewed
     if username:
         profile_user = get_object_or_404(User, username=username)
         is_own_profile = request.user.is_authenticated and request.user == profile_user
     else:
+        # No username → show own profile (must be logged in)
         if not request.user.is_authenticated:
             return redirect('accounts:login')
         profile_user = request.user
         is_own_profile = True
-    
+
+    # Profiles
     student_profile = getattr(profile_user, 'studentprofile', None)
     tutor_profile = getattr(profile_user, 'tutorprofile', None)
-    
-    # ✅ Get classes with skill levels for students
-    student_classes_with_skill = []
-    if student_profile:
-        from .models import StudentClassSkill
-        for skill in StudentClassSkill.objects.filter(student=student_profile).select_related('class_taken'):
-            student_classes_with_skill.append({
-                'class': skill.class_taken,
-                'skill_level': skill.skill_level,
-                'skill_label': skill.get_skill_level_display(),
-                'color': skill.get_color()
-            })
-    
+
+    # Determine previous page for Back button
+    back_url = request.META.get('HTTP_REFERER') or '/'
+
     return render(request, 'accounts/profile.html', {
         'profile_user': profile_user,
         'student_profile': student_profile,
         'tutor_profile': tutor_profile,
         'is_own_profile': is_own_profile,
-        'student_classes_with_skill': student_classes_with_skill,
+        'back_url': back_url,
     })
 
 def _get_user_profile(u):

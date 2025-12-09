@@ -406,6 +406,37 @@ def session_detail(request, session_id):
         messages.error(request, "You cannot view this session.")
         return redirect("tutoringsession:dashboard")
 
+    recommended_students = []
+    subject_obj = session.subject
+    session_subject = subject_obj.name.lower().strip() if subject_obj else ""
+
+
+    # All students except the tutor
+    students = (
+        StudentProfile.objects
+        .exclude(user=session.tutor)
+        .select_related("user")
+        .prefetch_related("class_skills__class_taken")
+    )
+
+    for student in students:
+        # Extract clean lowercased class names
+        student_class_names = [
+            skill.class_taken.name.lower().strip()
+            for skill in student.class_skills.all()
+            if hasattr(skill.class_taken, "name")
+        ]
+
+        # Match session subject against student's classes
+        matches = [cls_name for cls_name in student_class_names if session_subject in cls_name]
+
+        if matches:
+            recommended_students.append({
+                "student": student,
+                "matched": matches,
+            })
+
     return render(request, "tutoringsession/detail.html", {
-        "session": session
+        "session": session,
+        "recommended_students": recommended_students,
     })
