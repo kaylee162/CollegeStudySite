@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.db.models import Q
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from accounts.models import Friendship
+from accounts.models import Friendship, StudentClassSkill
 from .models import TutoringSession, SessionRequest
 from django.contrib.auth.models import User
 from accounts.models import TutorProfile, StudentProfile
@@ -29,7 +29,7 @@ def _parse_time(s: str):
     return None
 
 def index(request):
-    qs = TutoringSession.objects.select_related("tutor").all()
+    qs = TutoringSession.objects.select_related("tutor", "subject").all()
 
     # --- basic text filters ---
     subject = (request.GET.get("subject") or "").strip()
@@ -58,10 +58,9 @@ def index(request):
         try:
             qs = qs.filter(date=datetime.strptime(date_str, "%Y-%m-%d").date())
         except ValueError:
-            pass  # ignore bad date input
+            pass
 
     # --- time containment ---
-    # include sessions with NULL/Blank start/end as "any time"
     time_str = (request.GET.get("time") or "").strip()
     t = _parse_time(time_str)
     if t is not None:
@@ -97,21 +96,20 @@ def index(request):
     
     for s in qs:
         if s.latitude and s.longitude and not s.is_remote:
-            # Calculate distance if user has location
             distance_miles = None
             if user_lat and user_lng:
                 distance_miles = haversine(user_lng, user_lat, s.longitude, s.latitude)
             
-            # Get tutor avatar (assuming tutor has profile with avatar)
             avatar_url = "/static/img/avatar-default.png"
             if hasattr(s.tutor, 'avatar') and s.tutor.avatar:
                 avatar_url = s.tutor.avatar.url
             
+            # ✅ Fix: Convert subject to string
             markers.append({
                 "id": s.id,
                 "lat": float(s.latitude),
                 "lng": float(s.longitude),
-                "title": s.subject.name if s.subject else "",
+                "title": s.subject.name if s.subject else "",  # ✅ Access .name
                 "location": s.location,
                 "tutor": s.tutor.username,
                 "date": s.date.isoformat() if s.date else "",
@@ -120,7 +118,6 @@ def index(request):
             })
             has_map_data = True
 
-    # Convert markers to JSON for template
     markers_json = json.dumps(markers)
 
     return render(request, "tutoringsession/index.html", {
@@ -162,12 +159,10 @@ def friends_sessions(request):
 def request_session(request, session_id):
     session = get_object_or_404(TutoringSession, id=session_id)
 
-    # prevent joining if full (could technically just not show full, but you can at least view tutor and maybe connect?)
     if session.is_full():
         messages.error(request, "Sorry, this session is already full.")
         return redirect("tutoringsession:index")
 
-    # avoid duplicate requests
     existing = SessionRequest.objects.filter(session=session, student=request.user).first()
     if existing:
         messages.info(request, f"You already have a request ({existing.status}).")
@@ -181,12 +176,10 @@ def request_session(request, session_id):
 def approve_request(request, request_id):
     req = get_object_or_404(SessionRequest, id=request_id)
 
-    # Permission check
     if req.session.tutor != request.user:
         messages.error(request, "You cannot approve requests for this session.")
         return redirect("tutoringsession:dashboard")
 
-    # Prevent approving if full
     if req.session.is_full():
         messages.error(request, "This session is full.")
         return redirect("tutoringsession:detail", req.session.id)
@@ -230,25 +223,24 @@ def my_requests(request):
 def cancel_request(request, request_id):
     req = get_object_or_404(SessionRequest, id=request_id, student=request.user)
 
-    # Students cannot cancel declined requests (not necessary)
-    # But safe to prevent weird behavior
     if req.status == "declined":
         messages.error(request, "This request cannot be canceled.")
         return redirect("tutoringsession:my_requests")
 
-    # Cancel by deleting or marking as canceled
     req.status = "canceled"
     req.save()
 
     messages.success(request, "Your request has been canceled.")
     return redirect("tutoringsession:my_requests")
 
+# ✅ Updated search_students to search by classes with skill levels
 def search_students(request):
-    qs = StudentProfile.objects.select_related("user").all()
+    qs = StudentProfile.objects.select_related("user").prefetch_related("class_skills__class_taken").all()
 
     name_q = (request.GET.get("name") or "").strip()
-    subject_q = (request.GET.get("subject") or "").strip()
+    class_q = (request.GET.get("class_name") or "").strip()
     location_q = (request.GET.get("location") or "").strip()
+    skill_level_q = (request.GET.get("skill_level") or "").strip()
 
     if name_q:
         qs = qs.filter(
@@ -256,14 +248,41 @@ def search_students(request):
             Q(user__first_name__icontains=name_q) |
             Q(user__last_name__icontains=name_q)
         )
-    if subject_q:
-        qs = qs.filter(interests__icontains=subject_q)
+    
+    # ✅ Filter by class name
+    if class_q:
+        qs = qs.filter(class_skills__class_taken__name__icontains=class_q).distinct()
+    
+    # ✅ Filter by skill level
+    if skill_level_q and skill_level_q.isdigit():
+        qs = qs.filter(class_skills__skill_level=int(skill_level_q)).distinct()
+    
     if location_q:
         qs = qs.filter(location__icontains=location_q)
 
+    # ✅ Attach class skills with colors for display (use a different attribute name)
+    students_with_skills = []
+    for student in qs:
+        class_skill_list = []
+        for skill in student.class_skills.all():
+            class_skill_list.append({
+                'class_name': skill.class_taken.name,
+                'skill_level': skill.skill_level,
+                'color': skill.get_color()
+            })
+        
+        # ✅ Use a different attribute name to avoid conflict
+        student.class_skill_display = class_skill_list
+        students_with_skills.append(student)
+
     return render(request, "tutoringsession/search_students.html", {
-        "students": qs,
-        "selected": {"name": name_q, "subject": subject_q, "location": location_q}
+        "students": students_with_skills,
+        "selected": {
+            "name": name_q,
+            "class_name": class_q,
+            "location": location_q,
+            "skill_level": skill_level_q
+        }
     })
 
 @login_required
@@ -271,7 +290,6 @@ def create_session(request):
     if request.method == 'POST':
         form = TutoringSessionForm(request.POST)
         
-        # ✅ Get and validate class selection
         class_id = request.POST.get('subject', '').strip()
         
         if not class_id or not class_id.isdigit():
@@ -295,7 +313,7 @@ def create_session(request):
         if form.is_valid():
             session = form.save(commit=False)
             session.tutor = request.user
-            session.subject = selected_class  # ✅ Assign the Class object
+            session.subject = selected_class
             session.save()
             messages.success(request, 'Session created successfully!')
             return redirect('tutoringsession:dashboard')
@@ -318,7 +336,6 @@ def edit_session(request, session_id):
     if request.method == 'POST':
         form = TutoringSessionForm(request.POST, instance=session)
         
-        # ✅ Get and validate class selection
         class_id = request.POST.get('subject', '').strip()
         
         if not class_id or not class_id.isdigit():
@@ -347,7 +364,7 @@ def edit_session(request, session_id):
         
         if form.is_valid():
             session = form.save(commit=False)
-            session.subject = selected_class  # ✅ Assign the Class object
+            session.subject = selected_class
             session.save()
             messages.success(request, 'Session updated successfully!')
             return redirect('tutoringsession:dashboard')
@@ -370,7 +387,6 @@ def edit_session(request, session_id):
 def delete_session(request, session_id):
     session = get_object_or_404(TutoringSession, id=session_id)
 
-    # Permission check
     if session.tutor != request.user:
         messages.error(request, "You cannot delete this session.")
         return redirect("tutoringsession:index")
@@ -386,7 +402,6 @@ def delete_session(request, session_id):
 
 @login_required
 def tutor_dashboard(request):
-    # Only tutors can access
     if not hasattr(request.user, "tutorprofile"):
         messages.error(request, "You must be a tutor to access this page.")
         return redirect("tutoringsession:index")
@@ -401,7 +416,6 @@ def tutor_dashboard(request):
 def session_detail(request, session_id):
     session = get_object_or_404(TutoringSession, id=session_id)
 
-    # Tutors can view their own sessions; students can view all
     if hasattr(request.user, "tutorprofile") and session.tutor != request.user:
         messages.error(request, "You cannot view this session.")
         return redirect("tutoringsession:dashboard")
@@ -410,8 +424,6 @@ def session_detail(request, session_id):
     subject_obj = session.subject
     session_subject = subject_obj.name.lower().strip() if subject_obj else ""
 
-
-    # All students except the tutor
     students = (
         StudentProfile.objects
         .exclude(user=session.tutor)
@@ -420,14 +432,12 @@ def session_detail(request, session_id):
     )
 
     for student in students:
-        # Extract clean lowercased class names
         student_class_names = [
             skill.class_taken.name.lower().strip()
             for skill in student.class_skills.all()
             if hasattr(skill.class_taken, "name")
         ]
 
-        # Match session subject against student's classes
         matches = [cls_name for cls_name in student_class_names if session_subject in cls_name]
 
         if matches:
