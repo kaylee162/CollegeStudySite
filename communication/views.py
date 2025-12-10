@@ -292,16 +292,23 @@ def get_other_user(request, conversation_sid: str):
         try:
             user = User.objects.get(id=other_user['user_id'])
             
-            # Get profile - try both student and tutor
+            # Get profile
             student_profile = getattr(user, 'studentprofile', None)
             tutor_profile = getattr(user, 'tutorprofile', None)
             profile = student_profile or tutor_profile
             
+            # Get avatar URL and make it absolute
             avatar_url = None
-            if profile and hasattr(profile, 'avatar') and profile.avatar:
-                avatar_url = request.build_absolute_uri(profile.avatar.url)
+            if profile:
+                avatar_relative = profile.avatar_url_or_default()
+                # Only build absolute URI for local files
+                if avatar_relative and not avatar_relative.startswith('http'):
+                    avatar_url = request.build_absolute_uri(avatar_relative)
+                else:
+                    avatar_url = avatar_relative
             
             return JsonResponse({
+                "id": user.id,
                 "user_id": user.id,
                 "username": user.username,
                 "first_name": user.first_name,
@@ -313,6 +320,7 @@ def get_other_user(request, conversation_sid: str):
         except User.DoesNotExist:
             # Fallback to just username if user not found
             return JsonResponse({
+                "id": other_user['user_id'],
                 "user_id": other_user['user_id'],
                 "username": other_user['username'],
                 "avatar_url": None,
@@ -334,14 +342,12 @@ def get_friends_list(request):
     Returns a list of all friends with their basic info.
     """
     try:
-        # Get all friendships where the user is involved
         friendships = Friendship.objects.filter(
             Q(user=request.user) | Q(friend=request.user)
         ).select_related('user', 'friend')
         
         friends = []
         for friendship in friendships:
-            # Determine which user is the friend
             friend_user = friendship.friend if friendship.user == request.user else friendship.user
             
             # Get profile for avatar
@@ -349,9 +355,15 @@ def get_friends_list(request):
             tutor_profile = getattr(friend_user, 'tutorprofile', None)
             profile = student_profile or tutor_profile
             
+            # ✅ Get avatar URL and make it absolute
             avatar_url = None
-            if profile and hasattr(profile, 'avatar') and profile.avatar:
-                avatar_url = request.build_absolute_uri(profile.avatar.url)
+            if profile:
+                avatar_relative = profile.avatar_url_or_default()
+                # Only build absolute URI for local files, not external URLs
+                if avatar_relative and not avatar_relative.startswith('http'):
+                    avatar_url = request.build_absolute_uri(avatar_relative)
+                else:
+                    avatar_url = avatar_relative
             
             friends.append({
                 'id': friend_user.id,
@@ -361,7 +373,6 @@ def get_friends_list(request):
                 'avatar_url': avatar_url,
             })
         
-        # Sort by username
         friends.sort(key=lambda x: x['username'].lower())
         
         return JsonResponse({'friends': friends})

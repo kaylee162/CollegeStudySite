@@ -2,6 +2,29 @@
 {% load static %}
 
 {% block content %}
+<style>
+  /* Connect page – avatar cleanup, scoped so it doesn't mess other pages */
+  .profile-section .action-card .action-icon.has-avatar {
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      border-radius: 12px;              /* rounded square */
+      background: transparent;          /* remove circle bg */
+      box-shadow: none;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+  }
+
+  .profile-section .action-card .action-icon.has-avatar img {
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: inherit !important; /* follow container shape */
+      object-fit: cover;
+  }
+</style>
+
 <section class="section-container" style="margin-top:2rem;">
   <div class="profile-section">
     <div class="section-header">
@@ -166,7 +189,20 @@
           <div class="action-cards">
             {% for u in users %}
             <div class="action-card {% if u.tutorprofile %}tutor{% endif %}">
-              <div class="action-icon {% if u.tutorprofile %}tutor{% endif %}"><i class="fas fa-user"></i></div>
+              <div class="action-icon {% if u.tutorprofile %}tutor{% endif %}{% if u.studentprofile or u.tutorprofile %} has-avatar{% endif %}">
+                {% comment %} Added avatar display identical to profile.html; no other changes. {% endcomment %}
+                {% if u.studentprofile %}
+                  <img src="{{ u.studentprofile.avatar_url_or_default }}"
+                       alt="{{ u.username }}'s avatar"
+                       style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                {% elif u.tutorprofile %}
+                  <img src="{{ u.tutorprofile.avatar_url_or_default }}"
+                       alt="{{ u.username }}'s avatar"
+                       style="width:40px;height:40px;border-radius:50%;object-fit:cover%;">
+                {% else %}
+                  <i class="fas fa-user"></i>
+                {% endif %}
+              </div>
               <div class="action-content">
                 <h3>{{ u.username }}</h3>
                 <p style="color:var(--text-secondary); margin-top:.25rem;">
@@ -211,7 +247,20 @@
           <div class="action-cards">
             {% for f in friends %}
             <div class="action-card">
-              <div class="action-icon"><i class="fas fa-user-check"></i></div>
+              <div class="action-icon{% if f.studentprofile or f.tutorprofile %} has-avatar{% endif %}">
+                {% comment %} Show friend's avatar like profile.html {% endcomment %}
+                {% if f.studentprofile %}
+                  <img src="{{ f.studentprofile.avatar_url_or_default }}"
+                       alt="{{ f.username }}'s avatar"
+                       style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                {% elif f.tutorprofile %}
+                  <img src="{{ f.tutorprofile.avatar_url_or_default }}"
+                       alt="{{ f.username }}'s avatar"
+                       style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                {% else %}
+                  <i class="fas fa-user-check"></i>
+                {% endif %}
+              </div>
               <div class="action-content">
                 <h3>{{ f.username }}</h3>
                 <p style="color:var(--text-secondary); margin-top:.25rem;">
@@ -243,7 +292,20 @@
               <div class="action-cards">
                 {% for fr in incoming %}
                   <div class="action-card">
-                    <div class="action-icon"><i class="fas fa-inbox"></i></div>
+                    <div class="action-icon{% if fr.from_user.studentprofile or fr.from_user.tutorprofile %} has-avatar{% endif %}">
+                      {% comment %} Use from_user's avatar {% endcomment %}
+                      {% if fr.from_user.studentprofile %}
+                        <img src="{{ fr.from_user.studentprofile.avatar_url_or_default }}"
+                             alt="{{ fr.from_user.username }}'s avatar"
+                             style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                      {% elif fr.from_user.tutorprofile %}
+                        <img src="{{ fr.from_user.tutorprofile.avatar_url_or_default }}"
+                             alt="{{ fr.from_user.username }}'s avatar"
+                             style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                      {% else %}
+                        <i class="fas fa-inbox"></i>
+                      {% endif %}
+                    </div>
                     <div class="action-content">
                       <h3>{{ fr.from_user.username }}</h3>
                       <p style="color:var(--text-secondary); margin-top:.25rem;">
@@ -275,7 +337,20 @@
               <div class="action-cards">
                 {% for fr in outgoing %}
                   <div class="action-card">
-                    <div class="action-icon"><i class="far fa-paper-plane"></i></div>
+                    <div class="action-icon{% if fr.to_user.studentprofile or fr.to_user.tutorprofile %} has-avatar{% endif %}">
+                      {% comment %} Use to_user's avatar {% endcomment %}
+                      {% if fr.to_user.studentprofile %}
+                        <img src="{{ fr.to_user.studentprofile.avatar_url_or_default }}"
+                             alt="{{ fr.to_user.username }}'s avatar"
+                             style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                      {% elif fr.to_user.tutorprofile %}
+                        <img src="{{ fr.to_user.tutorprofile.avatar_url_or_default }}"
+                             alt="{{ fr.to_user.username }}'s avatar"
+                             style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                      {% else %}
+                        <i class="far fa-paper-plane"></i>
+                      {% endif %}
+                    </div>
                     <div class="action-content">
                       <h3>{{ fr.to_user.username }}</h3>
                       <p style="color:var(--text-secondary); margin-top:.25rem;">

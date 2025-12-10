@@ -13,6 +13,24 @@
       <p>Update your information below</p>
     </div>
 
+    <!-- ✅ Avatar Preview Section -->
+    <div class="avatar-preview-section" style="text-align: center; margin-bottom: 2rem;">
+      <div class="avatar-preview">
+        {% if profile_type == "Student" and form.instance.avatar %}
+          <img src="{{ form.instance.avatar.url }}" alt="Current avatar" id="avatarPreview">
+        {% elif profile_type == "Tutor" and form.instance.avatar %}
+          <img src="{{ form.instance.avatar.url }}" alt="Current avatar" id="avatarPreview">
+        {% else %}
+          <div class="avatar-placeholder" id="avatarPlaceholder">
+            <i class="fas fa-user"></i>
+          </div>
+        {% endif %}
+      </div>
+      <p style="color: var(--text-light); font-size: 0.875rem; margin-top: 0.5rem;">
+        <i class="fas fa-info-circle"></i> Upload a new photo to change your avatar
+      </p>
+    </div>
+
     <form method="POST" enctype="multipart/form-data" class="auth-form" novalidate>
       {% csrf_token %}
 
@@ -43,6 +61,11 @@
           <div class="form-group mb-3">
             <label for="{{ field.id_for_label }}" class="form-label">
               {{ field.label }}
+              {% if field.name == "avatar" %}
+                <span style="color: var(--text-light); font-weight: normal; font-size: 0.875rem;">
+                  (Preview will update automatically)
+                </span>
+              {% endif %}
             </label>
 
             {{ field }}
@@ -322,6 +345,34 @@
 
   render();
   updateInput();
+
+  // Live Avatar Preview
+  const avatarInput = document.querySelector('input[type="file"][name="avatar"]');
+  if (avatarInput) {
+      avatarInput.addEventListener('change', function(e) {
+          const file = e.target.files[0];
+          if (file) {
+              const reader = new FileReader();
+              reader.onload = function(e) {
+                  const preview = document.getElementById('avatarPreview');
+                  const placeholder = document.getElementById('avatarPlaceholder');
+                  const container = document.querySelector('.avatar-preview');
+                  
+                  if (preview) {
+                      // Update existing image
+                      preview.src = e.target.result;
+                  } else if (placeholder) {
+                      // Replace placeholder with image
+                      container.innerHTML = `<img src="${e.target.result}" alt="Avatar preview" id="avatarPreview">`;
+                  } else {
+                      // Create new img
+                      container.innerHTML = `<img src="${e.target.result}" alt="Avatar preview" id="avatarPreview">`;
+                  }
+              };
+              reader.readAsDataURL(file);
+          }
+      });
+  }
   </script>
 
   <style>

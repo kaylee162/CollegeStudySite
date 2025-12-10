@@ -59,11 +59,16 @@ class StudentProfile(models.Model):
         
         super().save(*args, **kwargs)
 
-    def avatar_url_or_default(self, request=None):
+    def avatar_url_or_default(self):
+        """Return avatar URL or default placeholder"""
         if self.avatar:
-            return request.build_absolute_uri(self.avatar.url) if request else self.avatar.url
-        d = static("img/avatar-default.png")
-        return request.build_absolute_uri(d) if request else d
+            return self.avatar.url  # Django will handle the URL properly
+        
+        # Use UI Avatars as fallback - generates user initials
+        name = self.user.get_full_name() or self.user.username
+        initials = '+'.join(word[0].upper() for word in name.split()[:2]) if name else 'U'
+        placeholder = f"https://ui-avatars.com/api/?name={initials}&background=3b82f6&color=fff&size=200"
+        return placeholder
 
     def __str__(self):
         return f"{self.user.username} - Student"
@@ -120,11 +125,16 @@ class TutorProfile(models.Model):
     def get_subjects_list(self):
         return [s.strip() for s in self.subjects.split(',')] if self.subjects else []
 
-    def avatar_url_or_default(self, request=None):
+    def avatar_url_or_default(self):
+        """Return avatar URL or default placeholder"""
         if self.avatar:
-            return request.build_absolute_uri(self.avatar.url) if request else self.avatar.url
-        d = static("img/avatar-default.png")
-        return request.build_absolute_uri(d) if request else d
+            return self.avatar.url  # Django will handle the URL properly
+        
+        # Use UI Avatars as fallback - generates user initials
+        name = self.user.get_full_name() or self.user.username
+        initials = '+'.join(word[0].upper() for word in name.split()[:2]) if name else 'U'
+        placeholder = f"https://ui-avatars.com/api/?name={initials}&background=3b82f6&color=fff&size=200"
+        return placeholder
 
     def __str__(self):
         return f"{self.user.username} - Tutor"

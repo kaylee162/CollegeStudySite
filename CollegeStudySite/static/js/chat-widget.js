@@ -15,6 +15,11 @@ class ChatWidgetManager {
         this.conversations = [];
         this.currentUserId = parseInt(configEl.dataset.userId);
         this.defaultAvatar = configEl.dataset.defaultAvatar;
+        
+        // ✅ NEW: Store user avatars for message display
+        this.userAvatars = new Map();
+        this.conversationUsers = new Map(); // Map conversation SID to other user data
+        
         this.urls = {
             getToken: configEl.dataset.getTokenUrl,
             listConversations: configEl.dataset.listConversationsUrl,
@@ -164,15 +169,12 @@ class ChatWidgetManager {
     }
 
     setupClientListeners() {
-        // Don't set up conversation listeners automatically - wait for loadUnreadCounts
         this.twilioClient.on('conversationJoined', (conversation) => {
             console.log('Joined conversation:', conversation.sid);
-            // Don't call setupConversationListeners here - it will be called in loadUnreadCounts
         });
 
         this.twilioClient.on('conversationAdded', (conversation) => {
             console.log('Conversation added:', conversation.sid);
-            // Don't call setupConversationListeners here either
         });
 
         this.twilioClient.on('messageAdded', (message) => {
@@ -180,7 +182,6 @@ class ChatWidgetManager {
             this.handleNewMessage(message);
         });
 
-        // Load unread counts now that client is ready
         console.log('🔄 Twilio client ready, loading unread counts...');
         this.loadUnreadCounts();
     }
@@ -216,6 +217,12 @@ class ChatWidgetManager {
             
             this.friends = friendsData.friends || [];
             this.conversations = conversationsData.conversations || [];
+            
+            // ✅ NEW: Store friend avatars in the map
+            this.friends.forEach(friend => {
+                const userId = 'user_' + friend.id;
+                this.userAvatars.set(userId, friend.avatar_url || this.defaultAvatar);
+            });
             
             console.log('🔍 DEBUG - Raw data:', {
                 friends: this.friends,
@@ -292,16 +299,13 @@ class ChatWidgetManager {
             
             for (const conversation of conversations.items) {
                 try {
-                    // Get Twilio's unread count
                     const twilioUnreadCount = await conversation.getUnreadMessagesCount();
                     console.log(`📊 Twilio reports ${twilioUnreadCount} unread for ${conversation.sid}`);
                     
                     if (twilioUnreadCount > 0) {
-                        // Get recent messages to count only messages NOT from current user
                         const messages = await conversation.getMessages(twilioUnreadCount);
                         const myIdentity = 'user_' + this.currentUserId;
                         
-                        // Count only unread messages from OTHER users
                         let actualUnreadCount = 0;
                         for (const message of messages.items) {
                             if (message.author !== myIdentity) {
@@ -320,7 +324,6 @@ class ChatWidgetManager {
                         }
                     }
                     
-                    // NOW set up listeners after we've captured the unread count
                     await this.setupConversationListeners(conversation);
                     
                 } catch (error) {
@@ -483,12 +486,10 @@ class ChatWidgetManager {
     }
 
     async openChatWindow(conversationSid, userId) {
-        // Guard against duplicate windows
         if (this.openChats.has(conversationSid)) {
             const existingWindow = this.openChats.get(conversationSid);
             existingWindow.classList.remove('minimized');
             
-            // Still mark as read even if already open
             await this.markConversationAsRead(conversationSid);
             this.unreadCounts.delete(conversationSid);
             this.updateNotificationBadge();
@@ -496,7 +497,6 @@ class ChatWidgetManager {
             return;
         }
 
-        // Add this check to prevent multiple simultaneous opens
         if (this.openingChats && this.openingChats.has(conversationSid)) {
             console.log('Chat window already opening for:', conversationSid);
             return;
@@ -507,18 +507,21 @@ class ChatWidgetManager {
             return;
         }
 
-        // Initialize the Set if it doesn't exist
         if (!this.openingChats) {
             this.openingChats = new Set();
         }
 
-        // Mark this conversation as currently opening
         this.openingChats.add(conversationSid);
 
         try {
             const url = this.urls.getOtherUser.replace('CONVERSATION_SID', conversationSid);
             const response = await fetch(url);
             const userData = await response.json();
+            
+            // ✅ NEW: Store user data for this conversation
+            this.conversationUsers.set(conversationSid, userData);
+            const otherUserId = 'user_' + userData.id;
+            this.userAvatars.set(otherUserId, userData.avatar_url || this.defaultAvatar);
 
             const chatWindow = this.createChatWindow(conversationSid, userData);
             this.widgetContainer.appendChild(chatWindow);
@@ -527,14 +530,11 @@ class ChatWidgetManager {
             
             await this.loadMessages(conversationSid, userId);
             
-            // Give Twilio a moment to process the messages being loaded
             await new Promise(resolve => setTimeout(resolve, 500));
             
-            // Mark conversation as read
             console.log(`📖 Opening chat window for ${conversationSid}, marking as read...`);
             await this.markConversationAsRead(conversationSid);
             
-            // Clear unread count
             this.unreadCounts.delete(conversationSid);
             this.updateNotificationBadge();
             this.renderFriendsList();
@@ -542,7 +542,6 @@ class ChatWidgetManager {
             console.error('Error opening chat window:', error);
             alert('Failed to open chat. Please try again.');
         } finally {
-            // Always remove from opening set when done
             this.openingChats.delete(conversationSid);
         }
     }
@@ -557,14 +556,11 @@ class ChatWidgetManager {
             console.log(`📖 Attempting to mark conversation ${conversationSid} as read...`);
             const conversation = await this.twilioClient.getConversationBySid(conversationSid);
             
-            // Get current unread count before marking as read
             const unreadBefore = await conversation.getUnreadMessagesCount();
             console.log(`📖 Unread count before marking: ${unreadBefore}`);
             
-            // Mark all messages as read
             await conversation.setAllMessagesRead();
             
-            // Verify it worked
             const unreadAfter = await conversation.getUnreadMessagesCount();
             console.log(`📖 Unread count after marking: ${unreadAfter}`);
             
@@ -665,7 +661,7 @@ class ChatWidgetManager {
 
             if (messages.length > 0) {
                 messagesContainer.innerHTML = messages.map(msg =>
-                    this.createMessageHTML({
+                    this.createMessageHTML(conversationSid, {
                         author: msg.author,
                         body: msg.body,
                         date_created: msg.date_created
@@ -684,8 +680,19 @@ class ChatWidgetManager {
         }
     }
 
-    createMessageHTML(message) {
+    // ✅ UPDATED: Now accepts conversationSid to get proper avatars
+    createMessageHTML(conversationSid, message) {
         const isSent = message.author === 'user_' + this.currentUserId;
+        
+        // ✅ Get the correct avatar based on who sent the message
+        let avatarUrl;
+        if (isSent) {
+            // Use current user's avatar (you'd need to pass this from backend or fetch it)
+            avatarUrl = this.defaultAvatar; // Could be enhanced to use actual user avatar
+        } else {
+            // Use the other user's avatar from the conversation
+            avatarUrl = this.userAvatars.get(message.author) || this.defaultAvatar;
+        }
 
         const rawDate = message.dateCreated || message.date_created || message.date;
         let time = '';
@@ -699,7 +706,7 @@ class ChatWidgetManager {
 
         return ''
             + '<div class="chat-message ' + (isSent ? 'sent' : 'received') + '">'
-                + '<img src="' + this.defaultAvatar + '" alt="Avatar" class="chat-message-avatar">'
+                + '<img src="' + avatarUrl + '" alt="Avatar" class="chat-message-avatar">'
                 + '<div class="chat-message-content">'
                     + '<div class="chat-message-bubble">' + this.escapeHtml(message.body || '') + '</div>'
                     + '<div class="chat-message-time">' + (time || '') + '</div>'
@@ -747,7 +754,8 @@ class ChatWidgetManager {
                 emptyState.remove();
             }
             
-            const messageHTML = this.createMessageHTML({
+            // ✅ UPDATED: Pass conversationSid for proper avatar lookup
+            const messageHTML = this.createMessageHTML(conversationSid, {
                 author: message.author,
                 body: message.body,
                 dateCreated: message.dateCreated
@@ -870,3 +878,4 @@ if (document.readyState === 'loading') {
         window.chatManager = new ChatWidgetManager();
     }
 }
+            

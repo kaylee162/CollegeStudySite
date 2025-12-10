@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %} 
 {% block content %}
 
 <div class="profile-page">
@@ -18,7 +18,17 @@
         <div class="profile-header">
             <div class="profile-avatar-section">
                 <div class="profile-avatar {% if student_profile %}student{% elif tutor_profile %}tutor{% endif %}">
-                    <i class="fas fa-{% if student_profile %}user-graduate{% elif tutor_profile %}chalkboard-teacher{% else %}user{% endif %}"></i>
+                    {% if student_profile %}
+                        <img src="{{ student_profile.avatar_url_or_default }}"
+                            alt="Profile picture"
+                            class="profile-avatar-img">
+                    {% elif tutor_profile %}
+                        <img src="{{ tutor_profile.avatar_url_or_default }}"
+                            alt="Profile picture"
+                            class="profile-avatar-img">
+                    {% else %}
+                        <i class="fas fa-user"></i>
+                    {% endif %}
                 </div>
                 <div class="profile-header-info">
                     <h1>{{ profile_user.get_full_name|default:profile_user.username }}</h1>
@@ -54,8 +64,43 @@
                     <a href="{% url 'accounts:connect_request' profile_user.id %}" class="btn btn-primary">
                         <i class="fas fa-user-plus"></i>
                         <span>Connect</span>
-                    </a>
-                    <a href="#" class="btn btn-secondary">
+                    <a href="#"
+                    class="btn btn-secondary"
+                    onclick="
+                            // If chat system isn't loaded yet, delay check
+                            if (!window.chatManager) {
+                                alert('Messaging system is still loading… try again in 1–2 seconds.');
+                                return false;
+                            }
+
+                            // If friends haven't loaded yet, wait + retry
+                            if (!chatManager.friends || chatManager.friends.length === 0) {
+                                console.log('Friends not loaded yet — retrying...');
+                                setTimeout(() => {
+                                    const isFriendRetry = chatManager.friends?.some(f => Number(f.id) === Number({{ profile_user.id }}));
+                                    if (!isFriendRetry) {
+                                        alert('❌ You must be friends to send messages.');
+                                    } else {
+                                        chatManager.createAndOpenConversation({{ profile_user.id }});
+                                    }
+                                }, 500);
+                                return false;
+                            }
+
+                            // Normal check (friends ARE loaded)
+                            const isFriend = chatManager.friends.some(
+                                f => Number(f.id) === Number({{ profile_user.id }})
+                            );
+
+                            if (!isFriend) {
+                                alert('❌ You must be friends to send messages.');
+                                return false;
+                            }
+
+                            // Open chat normally
+                            chatManager.createAndOpenConversation({{ profile_user.id }});
+                            return false;
+                    ">
                         <i class="fas fa-envelope"></i>
                         <span>Message</span>
                     </a>
