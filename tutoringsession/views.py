@@ -416,37 +416,48 @@ def tutor_dashboard(request):
 def session_detail(request, session_id):
     session = get_object_or_404(TutoringSession, id=session_id)
 
-    if hasattr(request.user, "tutorprofile") and session.tutor != request.user:
-        messages.error(request, "You cannot view this session.")
-        return redirect("tutoringsession:dashboard")
+    # Check if user is the tutor of this session
+    is_tutor = (session.tutor == request.user)
+    
+    # ✅ Get pending requests (only for tutors)
+    pending_requests = []
+    if is_tutor:
+        pending_requests = SessionRequest.objects.filter(
+            session=session,
+            status="pending"
+        ).select_related("student").order_by("-created_at")
 
+    # ✅ Only show recommended students to tutors
     recommended_students = []
-    subject_obj = session.subject
-    session_subject = subject_obj.name.lower().strip() if subject_obj else ""
+    if is_tutor:
+        subject_obj = session.subject
+        session_subject = subject_obj.name.lower().strip() if subject_obj else ""
 
-    students = (
-        StudentProfile.objects
-        .exclude(user=session.tutor)
-        .select_related("user")
-        .prefetch_related("class_skills__class_taken")
-    )
+        students = (
+            StudentProfile.objects
+            .exclude(user=session.tutor)
+            .select_related("user")
+            .prefetch_related("class_skills__class_taken")
+        )
 
-    for student in students:
-        student_class_names = [
-            skill.class_taken.name.lower().strip()
-            for skill in student.class_skills.all()
-            if hasattr(skill.class_taken, "name")
-        ]
+        for student in students:
+            student_class_names = [
+                skill.class_taken.name.lower().strip()
+                for skill in student.class_skills.all()
+                if hasattr(skill.class_taken, "name")
+            ]
 
-        matches = [cls_name for cls_name in student_class_names if session_subject in cls_name]
+            matches = [cls_name for cls_name in student_class_names if session_subject in cls_name]
 
-        if matches:
-            recommended_students.append({
-                "student": student,
-                "matched": matches,
-            })
+            if matches:
+                recommended_students.append({
+                    "student": student,
+                    "matched": matches,
+                })
 
     return render(request, "tutoringsession/detail.html", {
         "session": session,
+        "is_tutor": is_tutor,
+        "pending_requests": pending_requests,
         "recommended_students": recommended_students,
     })

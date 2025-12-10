@@ -7,9 +7,9 @@
         
         <!-- Back Button -->
         <div class="detail-back">
-            <a href="{% url 'tutoringsession:dashboard' %}" class="back-link">
+            <a href="{% if is_tutor %}{% url 'tutoringsession:dashboard' %}{% else %}{% url 'tutoringsession:index' %}{% endif %}" class="back-link">
                 <i class="fas fa-arrow-left"></i>
-                <span>Back to Dashboard</span>
+                <span>Back to {% if is_tutor %}Dashboard{% else %}Sessions{% endif %}</span>
             </a>
         </div>
 
@@ -29,7 +29,7 @@
                         </span>
                     {% endif %}
                 </div>
-                <h1>{{ session.subject }}</h1>
+                <h1>{{ session.subject.name }}</h1>
                 <div class="detail-meta">
                     <span class="meta-item">
                         <i class="fas fa-calendar"></i>
@@ -49,6 +49,7 @@
                 </div>
             </div>
 
+            {% if is_tutor %}
             <div class="detail-actions">
                 <a href="{% url 'tutoringsession:edit' session.id %}" class="btn btn-primary">
                     <i class="fas fa-edit"></i>
@@ -59,6 +60,7 @@
                     <span>Delete</span>
                 </a>
             </div>
+            {% endif %}
         </div>
 
         <!-- Session Details Grid -->
@@ -111,7 +113,7 @@
                             </div>
                             <div class="info-content">
                                 <span class="info-label">Available Seats</span>
-                                <span class="info-value">{{ session.capacity|add:session.seats_taken|default:session.capacity|add:"-"|add:session.seats_taken|default:"0" }} remaining</span>
+                                <span class="info-value">{{ session.capacity|add:"-"|add:session.seats_taken|default:"0" }} remaining</span>
                             </div>
                         </div>
                     </div>
@@ -163,6 +165,67 @@
                     </div>
                 </div>
 
+                <!-- ✅ Pending Requests (Tutors Only) -->
+                {% if is_tutor %}
+                <div class="detail-card">
+                    <div class="detail-card-header">
+                        <h2>
+                            <i class="fas fa-user-clock"></i>
+                            Pending Requests
+                            {% if pending_requests %}
+                            <span style="background: #fbbf24; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; margin-left: 0.5rem;">
+                                {{ pending_requests.count }}
+                            </span>
+                            {% endif %}
+                        </h2>
+                    </div>
+
+                    <div class="detail-card-body">
+                        {% if pending_requests %}
+                            <div class="action-cards">
+                                {% for req in pending_requests %}
+                                <div class="action-card" style="padding: 1rem;">
+                                    <div class="action-icon student">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+
+                                    <div class="action-content">
+                                        <h3 style="font-size: 1rem;">{{ req.student.username }}</h3>
+                                        {% if req.note %}
+                                        <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                            {{ req.note|truncatewords:15 }}
+                                        </p>
+                                        {% endif %}
+                                    </div>
+
+                                    <div style="display: flex; gap: 0.5rem; margin-left: auto;">
+                                        <form method="POST" action="{% url 'tutoringsession:approve_request' req.id %}" style="margin: 0;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
+                                                <i class="fas fa-check"></i>
+                                                Approve
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{% url 'tutoringsession:decline_request' req.id %}" style="margin: 0;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-secondary" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
+                                                <i class="fas fa-times"></i>
+                                                Decline
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="empty-state" style="text-align:center; margin:1rem 0;">
+                                No pending requests at this time.
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- Quick Stats -->
                 <div class="detail-card stats">
                     <div class="detail-card-header">
@@ -182,17 +245,18 @@
                         </div>
                         <div class="stat-row">
                             <span class="stat-label">Session Type</span>
-                            <span class="stat-value">{{ session.subject }}</span>
+                            <span class="stat-value">{{ session.subject.name }}</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Recommended Students -->
+                <!-- ✅ Recommended Students (Tutors Only) -->
+                {% if is_tutor %}
                 <div class="detail-card">
                     <div class="detail-card-header">
                         <h2>
                             <i class="fas fa-user-graduate"></i>
-                                Recommended Students
+                            Recommended Students
                         </h2>
                     </div>
 
@@ -201,7 +265,6 @@
                             <div class="action-cards">
                                 {% for rec in recommended_students %}
                                 <div class="action-card">
-
                                     <div class="action-icon student">
                                         <i class="fas fa-user"></i>
                                     </div>
@@ -219,18 +282,17 @@
                                         class="btn btn-primary">
                                         Connect
                                     </a>
-
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="empty-state" style="text-align:center; margin:1rem 0;">
+                                No recommended students for this subject yet.
+                            </p>
+                        {% endif %}
+                    </div>
                 </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <p class="empty-state" style="text-align:center; margin:1rem 0;">
-                No recommended students for this subject yet.
-            </p>
-        {% endif %}
-    </div>
-</div>
-
+                {% endif %}
 
             </div>
 
@@ -242,11 +304,10 @@
 <script>
 document.querySelectorAll('.progress-bar-fill').forEach(el => {
     const taken = parseInt(el.dataset.taken || 0);
-    const capacity = parseInt(el.dataset.capacity || 1); // prevents divide-by-zero
+    const capacity = parseInt(el.dataset.capacity || 1);
     const percent = Math.min(100, Math.max(0, (taken / capacity) * 100));
     el.style.width = percent + "%";
 });
 </script>
-
 
 {% endblock %}
