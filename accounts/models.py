@@ -2,8 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.templatetags.static import static
 from tutoringsession.utils import geocode_address
-from classes.models import Class 
-
+from classes.models import Class
 
 def avatar_upload_path(instance, filename):
     return f"avatars/user_{instance.user_id}/{filename}"
@@ -21,6 +20,8 @@ class StudentProfile(models.Model):
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
 
+    # Classes field
+    classes = models.ManyToManyField(Class, blank=True, related_name='students')
     # ✅ REMOVED direct classes field - use StudentClassSkill instead
     # classes relationship is now accessed via student.class_skills.all()
 
